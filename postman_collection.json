@@ -1,0 +1,51 @@
+{
+  "info": {
+    "name": "Fuel Route API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [{"key": "base_url", "value": "http://127.0.0.1:8000"}],
+  "item": [
+    {
+      "name": "New York -> Los Angeles (GET)",
+      "request": {"method": "GET", "url": {
+        "raw": "{{base_url}}/api/route/?start=New York, NY&finish=Los Angeles, CA",
+        "host": ["{{base_url}}"], "path": ["api", "route", ""],
+        "query": [{"key": "start", "value": "New York, NY"}, {"key": "finish", "value": "Los Angeles, CA"}]}}
+    },
+    {
+      "name": "Chicago -> Miami (POST JSON)",
+      "request": {"method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"start\": \"Chicago, IL\",\n  \"finish\": \"Miami, FL\"\n}"},
+        "url": {"raw": "{{base_url}}/api/route/", "host": ["{{base_url}}"], "path": ["api", "route", ""]}}
+    },
+    {
+      "name": "Address + ZIP, absolute cheapest (stop_penalty=0), no geometry",
+      "request": {"method": "POST",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\n  \"start\": \"1600 Pennsylvania Ave NW, Washington, DC\",\n  \"finish\": \"94103\",\n  \"stop_penalty\": 0,\n  \"geometry\": \"none\"\n}"},
+        "url": {"raw": "{{base_url}}/api/route/", "host": ["{{base_url}}"], "path": ["api", "route", ""]}}
+    },
+    {
+      "name": "Short trip, lat/lng input",
+      "request": {"method": "GET", "url": {
+        "raw": "{{base_url}}/api/route/?start=30.2672,-97.7431&finish=32.7767,-96.7970",
+        "host": ["{{base_url}}"], "path": ["api", "route", ""],
+        "query": [{"key": "start", "value": "30.2672,-97.7431"}, {"key": "finish", "value": "32.7767,-96.7970"}]}}
+    },
+    {
+      "name": "Error: outside the USA",
+      "request": {"method": "GET", "url": {
+        "raw": "{{base_url}}/api/route/?start=Paris, France&finish=Dallas, TX",
+        "host": ["{{base_url}}"], "path": ["api", "route", ""],
+        "query": [{"key": "start", "value": "Paris, France"}, {"key": "finish", "value": "Dallas, TX"}]}}
+    },
+    {
+      "name": "Map page (open in browser)",
+      "request": {"method": "GET", "url": {
+        "raw": "{{base_url}}/api/route/map/?start=New York, NY&finish=Los Angeles, CA",
+        "host": ["{{base_url}}"], "path": ["api", "route", "map", ""],
+        "query": [{"key": "start", "value": "New York, NY"}, {"key": "finish", "value": "Los Angeles, CA"}]}}
+    }
+  ]
+}
