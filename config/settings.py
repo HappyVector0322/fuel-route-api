@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'routing',
 ]
 
 MIDDLEWARE = [
@@ -130,3 +132,43 @@ MAILERS = {
     },
 }
 
+
+# --- Django REST framework -------------------------------------------------
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
+    'UNAUTHENTICATED_USER': None,
+}
+
+# --- Caching ---------------------------------------------------------------
+# Route plans are cached so repeated requests (and the map page) never hit the
+# routing API twice for the same trip.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'fuelroute',
+        'TIMEOUT': 60 * 60 * 6,
+    }
+}
+
+# --- Fuel route planner ----------------------------------------------------
+FUELROUTE = {
+    # Free, keyless OSRM demo server. Swap for a self-hosted instance in prod.
+    'OSRM_BASE_URL': os.environ.get('OSRM_BASE_URL', 'https://router.project-osrm.org'),
+    # Used only when a start/finish can't be resolved from the local gazetteer.
+    'NOMINATIM_URL': os.environ.get('NOMINATIM_URL', 'https://nominatim.openstreetmap.org/search'),
+    'USER_AGENT': os.environ.get('FUELROUTE_USER_AGENT', 'fuelroute-api/1.0 (assessment demo)'),
+    'HTTP_TIMEOUT_SECONDS': 15,
+    'VEHICLE_RANGE_MILES': 500.0,
+    'VEHICLE_MPG': 10.0,
+    # A station counts as "on the route" if it is within this many miles of it.
+    # Station coordinates are city-level, so this also absorbs geocoding error.
+    'MAX_STATION_DISTANCE_MILES': 5.0,
+    # Fixed "cost" in dollars charged per fuel stop by the optimiser (not added to
+    # the reported fuel cost). Stops extra stops that save pennies; 0 = cheapest fuel.
+    'STOP_PENALTY_DOLLARS': 5.0,
+    # Load the station index and gazetteer in the background at startup.
+    'WARM_UP_ON_START': os.environ.get('FUELROUTE_WARM_UP', '1') == '1',
+}
