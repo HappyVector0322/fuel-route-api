@@ -12,6 +12,33 @@ It makes **1 external API call per request** (OSRM routing). Repeat requests mak
 
 ## Quick start
 
+### With Docker (recommended)
+
+You need Docker with the Compose plugin. Nothing else is required.
+
+```bash
+docker compose up -d --build        # build the image and start the API on http://localhost:8000
+docker compose run --rm web python manage.py test routing   # run the test suite in the container
+docker compose logs -f web          # follow the logs
+docker compose down                 # stop it
+```
+
+With `make`, the same commands are `make up`, `make test`, `make logs` and `make down`.
+
+On first start, the container applies migrations and loads the fuel stations into a SQLite database. The database lives on the `db-data` volume, so later starts skip the load. The API runs under gunicorn with `DEBUG=0`, and whitenoise serves the static files.
+
+Settings are read from environment variables, which you can put in a `.env` file next to `docker-compose.yml`:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `PORT` | `8000` | host port to publish |
+| `DJANGO_SECRET_KEY` | `change-me-in-production` | Django secret key |
+| `DJANGO_DEBUG` | `0` | set to `1` for debug pages |
+| `DJANGO_ALLOWED_HOSTS` | `*` | comma-separated host names |
+| `OSRM_BASE_URL` | public OSRM demo | point at a self-hosted OSRM for faster routing |
+
+### Without Docker
+
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate   # Django 6.1 needs Python >= 3.12
 pip install -r requirements.txt
@@ -20,9 +47,11 @@ python manage.py load_fuel_stations     # imports the pre-geocoded station list 
 python manage.py runserver
 ```
 
+### Using it
+
 - JSON API: `GET http://127.0.0.1:8000/api/route/?start=New York, NY&finish=Los Angeles, CA`
 - Map UI: open `http://127.0.0.1:8000/` and submit the form, or follow `map_url` from any API response.
-- Tests: `python manage.py test routing`
+- Tests: `python manage.py test routing`, or `make test` with Docker
 
 ## API
 
@@ -125,5 +154,6 @@ routing/
   management/commands/       build_station_data, load_fuel_stations
   tests/                     optimizer (incl. brute-force check), geo, API (OSRM mocked)
 postman_collection.json      ready-made requests for Postman
+Dockerfile, docker-compose.yml, docker/entrypoint.sh, Makefile   container setup
 data/                        price list, geocoded stations, gazetteer
 ```
