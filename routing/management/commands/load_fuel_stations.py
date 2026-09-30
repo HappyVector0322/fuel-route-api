@@ -16,8 +16,15 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--path', default=str(GEOCODED_CSV))
+        parser.add_argument(
+            '--if-empty', action='store_true',
+            help='Do nothing if stations are already loaded (used by the Docker entrypoint).',
+        )
 
-    def handle(self, *args, path, **options):
+    def handle(self, *args, path, if_empty=False, **options):
+        if if_empty and FuelStation.objects.exists():
+            self.stdout.write('Fuel stations already loaded; skipping.')
+            return
         stations = {}
         with open(path, newline='') as f:
             for row in csv.DictReader(f):
