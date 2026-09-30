@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fuel Route Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root { --bg: #f6f7f9; --panel: #fff; --text: #1d2330; --muted: #5d6677; --line: #e3e6eb;
+            --accent: #2563eb; --good: #15803d; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+           color: var(--text); background: var(--bg); display: flex; height: 100vh; }
+    #panel { width: 380px; max-width: 100%; overflow-y: auto; background: var(--panel);
+             border-right: 1px solid var(--line); padding: 20px; }
+    #map { flex: 1; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    .muted { color: var(--muted); }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+    .stat { border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+    .stat b { display: block; font-size: 18px; }
+    .stat.total b { color: var(--good); }
+    ol { padding: 0; margin: 0; list-style: none; }
+    li.stop { border-top: 1px solid var(--line); padding: 10px 0; cursor: pointer; }
+    li.stop:hover { background: #f1f5ff; }
+    .badge { display: inline-block; min-width: 22px; height: 22px; border-radius: 11px; background: var(--accent);
+             color: #fff; text-align: center; font-weight: 600; margin-right: 6px; }
+    .error { color: #b91c1c; }
+    a { color: var(--accent); }
+    @media (max-width: 760px) { body { flex-direction: column; } #panel { width: 100%; height: 45vh; } }
+  </style>
+</head>
+<body>
+{% if error %}
+  <div id="panel" style="width:100%">
+    <h1>Could not plan this route</h1>
+    <p class="error">{{ error.message|default:error.details }}</p>
+    <p><a href="{% url 'index' %}">&larr; Try another route</a></p>
+  </div>
+{% else %}
+  <div id="panel">
+    <h1>{{ plan.start.label }} &rarr; {{ plan.finish.label }}</h1>
+    <div class="muted">{{ plan.route.distance_miles }} mi &middot; {{ plan.route.duration_hours }} h driving</div>
+    <div class="stats">
+      <div class="stat total"><span class="muted">Total fuel cost</span><b>${{ plan.summary.total_fuel_cost }}</b></div>
+      <div class="stat"><span class="muted">Gallons</span><b>{{ plan.summary.total_gallons }}</b></div>
+      <div class="stat"><span class="muted">Fuel stops</span><b>{{ plan.summary.number_of_stops }}</b></div>
+      <div class="stat"><span class="muted">Avg $/gal</span><b>${{ plan.summary.average_price_per_gallon }}</b></div>
+    </div>
+    <ol id="stops">
+      {% for stop in plan.fuel_stops %}
+      <li class="stop" data-i="{{ forloop.counter0 }}">
+        <div><span class="badge">{{ stop.stop_number }}</span><b>{{ stop.station.name }}</b></div>
+        <div class="muted">{{ stop.station.city }}, {{ stop.station.state }} &middot; mile {{ stop.mile_marker }}</div>
+        <div>{{ stop.gallons }} gal &times; ${{ stop.price_per_gallon }} = <b>${{ stop.cost }}</b></div>
+      </li>
+      {% endfor %}
+    </ol>
+    <p class="muted" style="margin-top:16px">
+      <a href="{% url 'index' %}">&larr; New route</a>
+    </p>
+  </div>
+  <div id="map"></div>
+  {{ plan|json_script:"plan-data" }}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const plan = JSON.parse(document.getElementById('plan-data').textContent);
+    const map = L.map('map');
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18, attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
+
+    const markers = [];
+    const pin = (color, text) => L.divIcon({
+      className: '', iconSize: [26, 26], iconAnchor: [13, 13],
+      html: `<div style="background:${color};color:#fff;border:2px solid #fff;border-radius:13px;` +
+            `width:26px;height:26px;text-align:center;line-height:22px;font:600 12px system-ui;` +
+            `box-shadow:0 1px 4px rgba(0,0,0,.4)">${text}</div>`,
+    });
+    const layer = L.geoJSON(plan.geojson, {
+      style: { color: '#2563eb', weight: 5, opacity: 0.8 },
+      pointToLayer: (f, latlng) => {
+        const p = f.properties;
+        if (p.kind === 'fuel_stop') {
+          const m = L.marker(latlng, { icon: pin('#15803d', p.stop_number) }).bindPopup(
+            `<b>${p.stop_number}. ${p.name}</b><br>Mile ${p.mile_marker}<br>` +
+            `${p.gallons} gal @ $${p.price_per_gallon} = <b>$${p.cost}</b>`);
+          markers.push(m);
+          return m;
+        }
+        return L.marker(latlng, { icon: pin(p.kind === 'start' ? '#1d2330' : '#b91c1c', p.kind === 'start' ? 'A' : 'B') })
+          .bindPopup(`<b>${p.kind === 'start' ? 'Start' : 'Finish'}</b><br>${p.label}`);
+      },
+    }).addTo(map);
+    map.fitBounds(layer.getBounds(), { padding: [30, 30] });
+
+    document.querySelectorAll('li.stop').forEach(li => li.addEventListener('click', () => {
+      const m = markers[+li.dataset.i];
+      map.setView(m.getLatLng(), 11);
+      m.openPopup();
+    }));
+  </script>
+{% endif %}
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fuel Route Planner</title>
+  <style>
+    body { margin: 0; font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+           background: #f6f7f9; color: #1d2330; }
+    main { max-width: 560px; margin: 48px auto; padding: 0 16px; }
+    form { background: #fff; border: 1px solid #e3e6eb; border-radius: 10px; padding: 20px; }
+    label { display: block; font-weight: 600; margin: 12px 0 4px; }
+    input { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #cfd4dc; border-radius: 6px; font: inherit; }
+    button { margin-top: 16px; padding: 10px 16px; border: 0; border-radius: 6px; background: #2563eb;
+             color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+    code { background: #eef0f3; padding: 1px 5px; border-radius: 4px; }
+    .muted { color: #5d6677; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Fuel Route Planner</h1>
+  <p class="muted">Cheapest fuel stops for a 500-mile-range, 10-mpg vehicle between two US locations.</p>
+  <form action="{% url 'route-map' %}" method="get">
+    <label for="start">Start</label>
+    <input id="start" name="start" value="New York, NY" required>
+    <label for="finish">Finish</label>
+    <input id="finish" name="finish" value="Los Angeles, CA" required>
+    <button type="submit">Show map</button>
+  </form>
+  <p class="muted">JSON API: <code>GET {% url 'route-plan' %}?start=New York, NY&amp;finish=Los Angeles, CA</code>
+    or <code>POST {% url 'route-plan' %}</code> with <code>{"start": "...", "finish": "..."}</code>.</p>
+</main>
+</body>
+</html>
